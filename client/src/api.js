@@ -9,7 +9,7 @@ export async function login(username, password) {
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || "Login failed");
+    throw new Error(data.error || data.detail || "Login failed");
   }
   return data;
 }
@@ -23,16 +23,16 @@ export async function register(username, password) {
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || "Registration failed");
+    throw new Error(data.error || data.detail || "Registration failed");
   }
   return data;
 }
 
-// Fetch posts/users with optional search query sent to backend
+// Fetch posts/users with search query 'q' sent to backend
 export async function getPosts(searchQuery = "") {
   const url = new URL(`${API_URL}/api/posts`);
   if (searchQuery.trim()) {
-    url.searchParams.append("search", searchQuery.trim());
+    url.searchParams.append("q", searchQuery.trim());
   }
 
   const res = await fetch(url.toString(), {
@@ -42,7 +42,7 @@ export async function getPosts(searchQuery = "") {
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || "Failed to fetch posts");
+    throw new Error(data.error || data.detail || "Failed to fetch posts");
   }
   return data;
 }
@@ -57,7 +57,7 @@ export async function updatePost(userId, post) {
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || "Failed to update post");
+    throw new Error(data.error || data.detail || "Failed to update post");
   }
   return data;
 }

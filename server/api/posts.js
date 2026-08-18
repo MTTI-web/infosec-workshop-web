@@ -18,30 +18,30 @@ module.exports = async (req, res) => {
     // FETCH POSTS & SEARCH (GET Method)
     // ==========================================
     if (req.method === "GET") {
-      const search = req.query?.search || req.query?.q || "";
-
-      if (search.trim()) {
-        query = db.prepare(`
-          SELECT id, username, post
-          FROM users
-          WHERE username LIKE ?
-          ORDER BY id DESC
-        `);
-        query.bind([`%${search.trim()}%`]);
-      } else {
-        query = db.prepare(`
-          SELECT id, username, post
-          FROM users
-          ORDER BY id DESC
-        `);
-      }
-
+      const q = req.query?.q || req.query?.search || "";
       const posts = [];
-      while (query.step()) {
-        posts.push(query.getAsObject());
+
+      if (q) {
+        // Intentionally vulnerable non-parameterized SQL query
+        const sql = `SELECT id, username, post FROM users WHERE username = '${q}' AND is_admin = 0`;
+
+        query = db.prepare(sql);
+        while (query.step()) {
+          posts.push(query.getAsObject());
+        }
+        query.free();
+        query = null;
+      } else {
+        // Default load hides admin user
+        query = db.prepare(
+          `SELECT id, username, post FROM users WHERE is_admin = 0 ORDER BY id DESC`,
+        );
+        while (query.step()) {
+          posts.push(query.getAsObject());
+        }
+        query.free();
+        query = null;
       }
-      query.free();
-      query = null;
 
       return res.status(200).json(posts);
     }
@@ -75,10 +75,10 @@ module.exports = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("Post operation failed:", err);
-    return res
-      .status(500)
-      .json({ error: "Post operation failed", detail: err.message });
+    // Pass the raw SQLite database message directly in the error field
+    const rawError = err.message || String(err);
+    console.error("SQL Execution Error:", rawError);
+    return res.status(400).json({ error: rawError, detail: rawError });
   } finally {
     if (query) query.free();
   }

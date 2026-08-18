@@ -20,7 +20,8 @@ export default function Dashboard({ user, onLogout }) {
       setAllPosts(data);
       setActiveQuery(query);
     } catch (err) {
-      setError(err.message || "Could not load community posts");
+      setError(err.message || "Database error occurred");
+      setAllPosts([]);
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,6 @@ export default function Dashboard({ user, onLogout }) {
             Every account gets one public message displayed across the platform.
           </p>
 
-          {error && <div className="alert alert-danger">{error}</div>}
           {successMsg && (
             <div className="alert alert-success">{successMsg}</div>
           )}
@@ -164,48 +164,60 @@ export default function Dashboard({ user, onLogout }) {
             </form>
           </div>
 
+          {/* Database & SQL Error Display Alert */}
+          {error && (
+            <div
+              className="alert alert-danger"
+              style={{ fontFamily: "monospace", wordBreak: "break-word" }}
+            >
+              <strong>SQL Error:</strong> {error}
+            </div>
+          )}
+
           {/* Posts List */}
           {loading ? (
             <div className="state-card">Searching community messages...</div>
-          ) : allPosts.length === 0 ? (
+          ) : allPosts.length === 0 && !error ? (
             <div className="state-card">
               {activeQuery
                 ? `No users found matching "${activeQuery}"`
                 : "No messages published yet."}
             </div>
-          ) : (
+          ) : ( 
             <div className="posts-grid">
-              {allPosts.map((item) => (
-                <article
-                  key={item.id}
-                  className={`post-card ${item.id === user.id ? "highlight-self" : ""}`}
-                >
-                  <div className="post-header">
-                    <div className="author-info">
-                      <span className="author-avatar">
-                        {item.username.charAt(0).toUpperCase()}
-                      </span>
-                      <div>
-                        <strong className="author-name">
-                          {item.username}
-                          {item.id === user.id && (
-                            <span className="self-tag">You</span>
-                          )}
-                        </strong>
-                        <span className="author-id">User ID: #{item.id}</span>
+              {allPosts
+                .filter((item) => !!item.post)
+                .map((item) => (
+                  <article
+                    key={item.id}
+                    className={`post-card ${item.id === user.id ? "highlight-self" : ""}`}
+                  >
+                    <div className="post-header">
+                      <div className="author-info">
+                        <span className="author-avatar">
+                          {item.username.charAt(0).toUpperCase()}
+                        </span>
+                        <div>
+                          <strong className="author-name">
+                            {item.username}
+                            {item.id === user.id && (
+                              <span className="self-tag">You</span>
+                            )}
+                          </strong>
+                          <span className="author-id">User ID: #{item.id}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <p className="post-content">
-                    {item.post ? (
-                      item.post
-                    ) : (
-                      <em className="empty-post">No message set yet.</em>
-                    )}
-                  </p>
-                </article>
-              ))}
+                    <p className="post-content">
+                      {item.post ? (
+                        item.post
+                      ) : (
+                        <em className="empty-post">No message set yet.</em>
+                      )}
+                    </p>
+                  </article>
+                ))}
             </div>
           )}
         </section>
