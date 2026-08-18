@@ -1,18 +1,63 @@
-// In prod, set VITE_API_URL to the deployed server project's URL
-// (e.g. https://vulnapp-server.vercel.app). Falls back to localhost
-// for local dev against `npm run dev` in /server.
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 export async function login(username, password) {
   const res = await fetch(`${API_URL}/api/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || 'Login failed');
+    throw new Error(data.error || "Login failed");
+  }
+  return data;
+}
+
+export async function register(username, password) {
+  const res = await fetch(`${API_URL}/api/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Registration failed");
+  }
+  return data;
+}
+
+// Fetch posts/users with optional search query sent to backend
+export async function getPosts(searchQuery = "") {
+  const url = new URL(`${API_URL}/api/posts`);
+  if (searchQuery.trim()) {
+    url.searchParams.append("search", searchQuery.trim());
+  }
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to fetch posts");
+  }
+  return data;
+}
+
+// Update current user's post
+export async function updatePost(userId, post) {
+  const res = await fetch(`${API_URL}/api/posts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, post }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to update post");
   }
   return data;
 }

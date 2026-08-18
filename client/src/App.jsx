@@ -26,6 +26,10 @@ export default function App() {
     setUser(userData);
   }
 
+  useEffect(() => {
+    console.log(user);
+  }, [user])
+
   function handleLogout() {
     localStorage.removeItem(STORAGE_KEY);
     setUser(null);

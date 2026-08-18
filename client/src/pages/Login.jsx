@@ -1,61 +1,167 @@
-import React, { useState } from 'react';
-import { login } from '../api.js';
+import React, { useState } from "react";
+import { login, register } from "../api.js";
 
 export default function Login({ onLogin }) {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [mode, setMode] = useState("login");
+
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const isRegistering = mode === "register";
+
+  function switchMode(nextMode) {
+    setMode(nextMode);
+    setError("");
+    setPassword("");
+    setConfirmPassword("");
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError('');
+    setError("");
+
+    if (!username.trim()) {
+      setError("Username is required");
+      return;
+    }
+
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+
+    if (isRegistering && password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
+
     try {
-      const user = await login(username, password);
+      const user = isRegistering
+        ? await register(username.trim(), password)
+        : await login(username.trim(), password);
+
       onLogin(user);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="page">
-      <div className="card">
-        <h1>VulnApp</h1>
-        <p className="subtitle">Workshop demo &mdash; sign in</p>
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-header">
+          <div className="brand-logo">💬</div>
+          <h1>VulnApp</h1>
+          <p className="subtext">
+            Workshop demo &mdash;{" "}
+            {isRegistering ? "create an account" : "sign in"}
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          <label>
-            Username
+        {error && <div className="alert alert-danger">{error}</div>}
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <div className="form-group">
+            <label htmlFor="username">Username</label>
             <input
+              id="username"
               type="text"
+              className="form-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              autoComplete="off"
+              autoComplete="username"
+              disabled={loading}
+              placeholder="Enter your username"
             />
-          </label>
+          </div>
 
-          <label>
-            Password
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
             <input
+              id="password"
               type="password"
+              className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete="off"
+              autoComplete={isRegistering ? "new-password" : "current-password"}
+              disabled={loading}
+              placeholder="••••••••"
             />
-          </label>
+          </div>
 
-          {error && <div className="error">{error}</div>}
+          {isRegistering && (
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm password</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                className="form-input"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                disabled={loading}
+                placeholder="••••••••"
+              />
+            </div>
+          )}
 
-          <button type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
+          <button
+            className="btn btn-primary btn-full"
+            type="submit"
+            disabled={loading}
+          >
+            {loading
+              ? isRegistering
+                ? "Creating account..."
+                : "Signing in..."
+              : isRegistering
+                ? "Create account"
+                : "Sign in"}
           </button>
         </form>
 
-        <p className="hint">Hint: only the username "bob" was ever handed out.</p>
+        <div className="auth-footer">
+          {!isRegistering ? (
+            <>
+              <div className="hint-box">
+                💡 <strong>Hint:</strong> only the username <code>bob</code> was
+                ever handed out.
+              </div>
+
+              <p className="switch-text">
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => switchMode("register")}
+                  disabled={loading}
+                >
+                  Register
+                </button>
+              </p>
+            </>
+          ) : (
+            <p className="switch-text">
+              Already have an account?{" "}
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => switchMode("login")}
+                disabled={loading}
+              >
+                Sign in
+              </button>
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
