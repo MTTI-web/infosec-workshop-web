@@ -1,10 +1,14 @@
 const initSqlJs = require("sql.js");
+const path = require("path");
 
 let dbPromise = null;
 
 async function getDb() {
   if (!dbPromise) {
-    dbPromise = initSqlJs().then((SQL) => {
+    dbPromise = initSqlJs({
+      locateFile: (file) =>
+        path.join(process.cwd(), "node_modules", "sql.js", "dist", file),
+    }).then((SQL) => {
       const db = new SQL.Database();
 
       // Create users table, now including their single 'post' property
