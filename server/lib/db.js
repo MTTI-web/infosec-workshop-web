@@ -6,8 +6,9 @@ let dbPromise = null;
 async function getDb() {
   if (!dbPromise) {
     dbPromise = initSqlJs({
+      // __dirname forces Vercel's build tracer to discover and bundle sql-wasm.wasm
       locateFile: (file) =>
-        path.join(process.cwd(), "node_modules", "sql.js", "dist", file),
+        path.join(__dirname, "../node_modules/sql.js/dist", file),
     }).then((SQL) => {
       const db = new SQL.Database();
 
