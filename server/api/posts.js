@@ -4,67 +4,115 @@ const { applyCors } = require("../lib/cors");
 module.exports = async (req, res) => {
   if (applyCors(req, res)) return;
 
+  if (req.method !== "GET" && req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed." });
+  }
+
+  let db;
+
   try {
-    const db = await getDb();
+    db = await getDb();
 
-    // GET: Search / List Posts (Intentionally Vulnerable to SQL Injection)
+    // ==========================================
+    // FETCH POSTS & SEARCH (GET Method)
+    // Vulnerability: Unsanitized SQL Concatenation
+    // ==========================================
     if (req.method === "GET") {
-      const q = req.query.q;
-      let sql;
-
-      if (q !== undefined && q !== null) {
-        // Raw string concatenation for workshop SQLi challenge
-        sql = `SELECT username, post FROM users WHERE username = '${q}'`;
-      } else {
-        sql = `SELECT username, post FROM users WHERE post IS NOT NULL AND post != ''`;
-      }
-
-      const stmt = db.prepare(sql);
+      const q = req.query?.q || req.query?.search || "";
       const posts = [];
-      while (stmt.step()) {
-        posts.push(stmt.getAsObject());
+      let query;
+
+      try {
+        if (q) {
+          // VULNERABLE QUERY: Allows dumping all posts (including admin) via ' OR 1=1 --
+          const sql = `SELECT id, username, post FROM users WHERE username = '${q}' AND is_admin = 0`;
+          query = db.prepare(sql);
+        } else {
+          // Default load hides admin user
+          query = db.prepare(
+            `SELECT id, username, post FROM users WHERE is_admin = 0 ORDER BY id DESC`,
+          );
+        }
+
+        while (query.step()) {
+          posts.push(query.getAsObject());
+        }
+      } finally {
+        if (query) query.free();
       }
-      stmt.free();
 
       return res.status(200).json(posts);
     }
 
-    // POST: Update User Post
+    // ==========================================
+    // UPDATE A POST (POST Method)
+    // Vulnerability: Insecure Direct Object Reference / Client Trust
+    // ==========================================
     if (req.method === "POST") {
+      // Safely parse body
       const body =
         typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
       const { userId, username, post } = body;
 
-      // Identify user by userId or username
-      let userRow = null;
-      if (userId) {
-        const stmt = db.prepare("SELECT id FROM users WHERE id = ?");
-        stmt.bind([userId]);
-        if (stmt.step()) userRow = stmt.getAsObject();
-        stmt.free();
-      } else if (username) {
-        const stmt = db.prepare("SELECT id FROM users WHERE username = ?");
-        stmt.bind([username]);
-        if (stmt.step()) userRow = stmt.getAsObject();
-        stmt.free();
+      // VULNERABILITY: We trust the client-provided username.
+      // An attacker can change their username to 'admin' in the request payload to overwrite the admin post.
+      const identifier = username || userId;
+
+      if (!identifier) {
+        return res
+          .status(400)
+          .json({ error: "User identifier required (username or userId)" });
       }
 
-      if (!userRow) {
-        return res.status(404).json({ error: "SQL Error: User not found" });
+      const sanitizedPost = typeof post === "string" ? post.trim() : "";
+
+      // 1. Find the user first
+      let row = null;
+      let checkStmt;
+      try {
+        if (username) {
+          checkStmt = db.prepare("SELECT id FROM users WHERE username = ?");
+          checkStmt.bind([username]);
+        } else {
+          checkStmt = db.prepare("SELECT id FROM users WHERE id = ?");
+          checkStmt.bind([userId]);
+        }
+
+        if (checkStmt.step()) {
+          row = checkStmt.getAsObject();
+        }
+      } finally {
+        if (checkStmt) checkStmt.free();
       }
 
-      // Update post
-      const updateStmt = db.prepare("UPDATE users SET post = ? WHERE id = ?");
-      updateStmt.bind([post || "", userRow.id]);
-      updateStmt.step();
-      updateStmt.free();
+      // Handle Vercel in-memory state loss gracefully
+      if (!row) {
+        return res.status(404).json({
+          error: "SQL Error: User not found.",
+          detail:
+            "Note: Newly registered users disappear on Vercel due to serverless in-memory DB resets. Log in as a seeded user ('bob' or 'alice') to test updates!",
+        });
+      }
 
-      return res.status(200).json({ success: true, post });
+      // 2. Update the post
+      let updateStmt;
+      try {
+        updateStmt = db.prepare("UPDATE users SET post = ? WHERE id = ?");
+        updateStmt.bind([sanitizedPost, row.id]);
+        updateStmt.step();
+      } finally {
+        if (updateStmt) updateStmt.free();
+      }
+
+      return res.status(200).json({
+        message: "Post updated successfully",
+        post: sanitizedPost,
+      });
     }
-
-    return res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
-    console.error("Posts API error:", err);
-    return res.status(500).json({ error: "SQL Error", detail: err.message });
+    // Pass the raw SQLite database message directly in the error field for the workshop frontend
+    const rawError = err.message || String(err);
+    console.error("SQL Execution Error:", rawError);
+    return res.status(400).json({ error: rawError, detail: rawError });
   }
 };

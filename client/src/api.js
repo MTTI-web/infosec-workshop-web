@@ -48,18 +48,18 @@ export async function getPosts(searchQuery = "") {
 
 export async function updatePost(user, post) {
   const res = await fetch(`${API_URL}/api/posts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId: user.id,
-      username: user.username,
-      post,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      userId: user.id, 
+      username: user.username, 
+      post 
     }),
   });
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || data.detail || "Failed to update post");
+    throw new Error(data.error || data.detail || 'Failed to update post');
   }
   return data;
 }
