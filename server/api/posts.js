@@ -4,82 +4,67 @@ const { applyCors } = require("../lib/cors");
 module.exports = async (req, res) => {
   if (applyCors(req, res)) return;
 
-  if (req.method !== "GET" && req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed." });
-  }
-
-  let db;
-  let query;
-
   try {
-    db = await getDb();
+    const db = await getDb();
 
-    // ==========================================
-    // FETCH POSTS & SEARCH (GET Method)
-    // ==========================================
+    // GET: Search / List Posts (Intentionally Vulnerable to SQL Injection)
     if (req.method === "GET") {
-      const q = req.query?.q || req.query?.search || "";
-      const posts = [];
+      const q = req.query.q;
+      let sql;
 
-      if (q) {
-        // Intentionally vulnerable non-parameterized SQL query
-        const sql = `SELECT id, username, post FROM users WHERE username = '${q}' AND is_admin = 0`;
-
-        query = db.prepare(sql);
-        while (query.step()) {
-          posts.push(query.getAsObject());
-        }
-        query.free();
-        query = null;
+      if (q !== undefined && q !== null) {
+        // Raw string concatenation for workshop SQLi challenge
+        sql = `SELECT username, post FROM users WHERE username = '${q}'`;
       } else {
-        // Default load hides admin user
-        query = db.prepare(
-          `SELECT id, username, post FROM users WHERE is_admin = 0 ORDER BY id DESC`,
-        );
-        while (query.step()) {
-          posts.push(query.getAsObject());
-        }
-        query.free();
-        query = null;
+        sql = `SELECT username, post FROM users WHERE post IS NOT NULL AND post != ''`;
       }
+
+      const stmt = db.prepare(sql);
+      const posts = [];
+      while (stmt.step()) {
+        posts.push(stmt.getAsObject());
+      }
+      stmt.free();
 
       return res.status(200).json(posts);
     }
 
-    // ==========================================
-    // UPDATE A POST (POST Method)
-    // ==========================================
+    // POST: Update User Post
     if (req.method === "POST") {
-      const { userId, post } = req.body || {};
+      const body =
+        typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
+      const { userId, username, post } = body;
 
-      if (!userId) {
-        return res.status(400).json({ error: "userId is required" });
+      // Identify user by userId or username
+      let userRow = null;
+      if (userId) {
+        const stmt = db.prepare("SELECT id FROM users WHERE id = ?");
+        stmt.bind([userId]);
+        if (stmt.step()) userRow = stmt.getAsObject();
+        stmt.free();
+      } else if (username) {
+        const stmt = db.prepare("SELECT id FROM users WHERE username = ?");
+        stmt.bind([username]);
+        if (stmt.step()) userRow = stmt.getAsObject();
+        stmt.free();
       }
 
-      const sanitizedPost = typeof post === "string" ? post.trim() : "";
-
-      query = db.prepare("UPDATE users SET post = ? WHERE id = ?");
-      query.bind([sanitizedPost, userId]);
-      query.step();
-      query.free();
-      query = null;
-
-      const changesResult = db.exec("SELECT changes()");
-      if (changesResult[0].values[0][0] === 0) {
-        return res.status(404).json({ error: "User not found" });
+      if (!userRow) {
+        return res.status(404).json({ error: "SQL Error: User not found" });
       }
 
-      return res.status(200).json({
-        message: "Post updated successfully",
-        post: sanitizedPost,
-      });
+      // Update post
+      const updateStmt = db.prepare("UPDATE users SET post = ? WHERE id = ?");
+      updateStmt.bind([post || "", userRow.id]);
+      updateStmt.step();
+      updateStmt.free();
+
+      return res.status(200).json({ success: true, post });
     }
+
+    return res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
-    // Pass the raw SQLite database message directly in the error field
-    const rawError = err.message || String(err);
-    console.error("SQL Execution Error:", rawError);
-    return res.status(400).json({ error: rawError, detail: rawError });
-  } finally {
-    if (query) query.free();
+    console.error("Posts API error:", err);
+    return res.status(500).json({ error: "SQL Error", detail: err.message });
   }
 };

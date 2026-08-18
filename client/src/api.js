@@ -46,11 +46,15 @@ export async function getPosts(searchQuery = "") {
   return data;
 }
 
-export async function updatePost(userId, post) {
+export async function updatePost(user, post) {
   const res = await fetch(`${API_URL}/api/posts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, post }),
+    body: JSON.stringify({
+      userId: user.id,
+      username: user.username,
+      post,
+    }),
   });
 
   const data = await res.json();
