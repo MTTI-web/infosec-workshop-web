@@ -1,11 +1,11 @@
 {
-  "name": "vulnapp-server",
+  "name": "infosec-workshop-web",
   "version": "1.0.0",
   "private": true,
   "description": "Intentionally vulnerable API for a cybersecurity workshop (SQLi login + trusted client-side admin flag)",
-  "main": "dev-server.js",
+  "main": "server.js",
   "scripts": {
-    "dev": "node dev-server.js"
+    "dev": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
