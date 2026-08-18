@@ -58,11 +58,9 @@ export default function Login({ onLogin }) {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-header">
-          <div className="brand-logo">💬</div>
-          <h1>VulnApp</h1>
+          <h1>Public Messenger</h1>
           <p className="subtext">
-            Workshop demo &mdash;{" "}
-            {isRegistering ? "create an account" : "sign in"}
+            Please &mdash; {isRegistering ? "create an account" : "sign in"}
           </p>
         </div>
 
@@ -131,11 +129,6 @@ export default function Login({ onLogin }) {
         <div className="auth-footer">
           {!isRegistering ? (
             <>
-              <div className="hint-box">
-                💡 <strong>Hint:</strong> only the username <code>bob</code> was
-                ever handed out.
-              </div>
-
               <p className="switch-text">
                 Don't have an account?{" "}
                 <button

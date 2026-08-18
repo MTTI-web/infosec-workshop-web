@@ -106,8 +106,7 @@ export default function Dashboard({ user, onLogout }) {
       <header className="navbar">
         <div className="navbar-container">
           <div className="brand">
-            <span className="brand-logo">💬</span>
-            <span className="brand-name">Community Board</span>
+            <span className="brand-name">Public Messenger</span>
           </div>
 
           <div className="user-nav-actions">
