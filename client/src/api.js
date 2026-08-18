@@ -46,20 +46,24 @@ export async function getPosts(searchQuery = "") {
   return data;
 }
 
-export async function updatePost(user, post) {
+export async function updatePost(userOrId, post) {
+  // Gracefully handle whether Dashboard.jsx passes a full user object or just the ID
+  const userId = typeof userOrId === "object" ? userOrId.id : userOrId;
+  const username = typeof userOrId === "object" ? userOrId.username : undefined;
+
   const res = await fetch(`${API_URL}/api/posts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-      userId: user.id, 
-      username: user.username, 
-      post 
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId: userId,
+      username: username,
+      post: post,
     }),
   });
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || data.detail || 'Failed to update post');
+    throw new Error(data.error || data.detail || "Failed to update post");
   }
   return data;
 }
