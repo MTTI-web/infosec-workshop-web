@@ -1,34 +1,7 @@
+// src/api.js
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-export async function login(username, password) {
-  const res = await fetch(`${API_URL}/api/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || data.detail || "Login failed");
-  }
-  return data;
-}
-
-export async function register(username, password) {
-  const res = await fetch(`${API_URL}/api/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || data.detail || "Registration failed");
-  }
-  return data;
-}
-
-// Fetch posts/users with search query 'q' sent to backend
+// Example fetch call format:
 export async function getPosts(searchQuery = "") {
   const url = new URL(`${API_URL}/api/posts`);
   if (searchQuery.trim()) {
@@ -43,21 +16,6 @@ export async function getPosts(searchQuery = "") {
   const data = await res.json();
   if (!res.ok) {
     throw new Error(data.error || data.detail || "Failed to fetch posts");
-  }
-  return data;
-}
-
-// Update current user's post
-export async function updatePost(userId, post) {
-  const res = await fetch(`${API_URL}/api/posts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, post }),
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.error || data.detail || "Failed to update post");
   }
   return data;
 }
