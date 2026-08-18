@@ -29,7 +29,7 @@ async function getDb() {
         INSERT INTO users (username, password, is_admin, secret_pin, post) VALUES
           ('bob', 'letmein123', 0, '4821', 'Hello world! This is my first post.'),
           ('alice', 'sunshine99', 0, '7734', 'Sunshine makes everything better!'),
-          ('admin', '70141889550cec0cfa21962be7d171ef', 1, '9999', 'I heard hashes are unbreakable. My password is');
+          ('admin', '70141889550cec0cfa21962be7d171ef', 1, '9999', 'I heard hashes are unbreakable. My password is 70141889550cec0cfa21962be7d171ef');
       `);
 
       return db;
