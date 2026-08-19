@@ -75,7 +75,7 @@ module.exports = async (req, res) => {
       const secretPin = Math.floor(1000 + Math.random() * 9000).toString();
       runQuery(
         db,
-        "INSERT INTO users (username, password, is_admin, secret_pin) VALUES (?, ?, 0, ?)",
+        "INSERT INTO users (username, password, is_hidden, secret_pin) VALUES (?, ?, 0, ?)",
         [cleanUsername, password, secretPin],
       );
 
@@ -86,6 +86,7 @@ module.exports = async (req, res) => {
       return res.status(201).json({
         id: newId,
         username: cleanUsername,
+        is_hidden: false,
         is_admin: false,
         encrypted_pin: encryptPin(secretPin),
       });
@@ -93,7 +94,7 @@ module.exports = async (req, res) => {
       // Login Flow
       const row = fetchOne(
         db,
-        "SELECT id, username, is_admin, secret_pin FROM users WHERE username = ? AND password = ?",
+        "SELECT id, username, is_hidden, secret_pin FROM users WHERE username = ? AND password = ?",
         [cleanUsername, password],
       );
 
@@ -104,7 +105,8 @@ module.exports = async (req, res) => {
       return res.status(200).json({
         id: row.id,
         username: row.username,
-        is_admin: !!row.is_admin,
+        is_hidden: !!row.is_hidden,
+        is_admin: !!row.is_hidden,
         encrypted_pin: encryptPin(row.secret_pin),
       });
     }

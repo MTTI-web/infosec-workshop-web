@@ -25,12 +25,12 @@ module.exports = async (req, res) => {
       try {
         if (q) {
           // VULNERABLE QUERY: Allows dumping all posts (including admin) via ' OR 1=1 --
-          const sql = `SELECT id, username, post FROM users WHERE username = '${q}' AND is_admin = 0`;
+          const sql = `SELECT id, username, post FROM users WHERE username = '${q}' AND is_hidden = 0`;
           query = db.prepare(sql);
         } else {
           // Default load hides admin user
           query = db.prepare(
-            `SELECT id, username, post FROM users WHERE is_admin = 0 ORDER BY id DESC`,
+            `SELECT id, username, post FROM users WHERE is_hidden = 0 ORDER BY id DESC`,
           );
         }
 

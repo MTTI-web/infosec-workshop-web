@@ -18,7 +18,7 @@ async function getDb() {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           username TEXT NOT NULL,
           password TEXT NOT NULL,
-          is_admin INTEGER NOT NULL DEFAULT 0,
+          is_hidden INTEGER NOT NULL DEFAULT 0,
           secret_pin TEXT NOT NULL,
           post TEXT
         );
@@ -26,10 +26,10 @@ async function getDb() {
 
       // Seed user data along with their single post
       db.run(`
-        INSERT INTO users (username, password, is_admin, secret_pin, post) VALUES
+        INSERT INTO users (username, password, is_hidden, secret_pin, post) VALUES
           ('bob', 'letmein123', 0, '4821', 'Hello world! This is my first post.'),
           ('alice', 'sunshine99', 0, '7734', 'Sunshine makes everything better!'),
-          ('admin', '70141889550cec0cfa21962be7d171ef', 1, '9999', 'I heard hashes are unbreakable. My password is 70141889550cec0cfa21962be7d171ef');
+          ('admin', 'S3cr3t-Adm1n-Pass!', 1, '9999', 'Announcement: The server will be going down for maintenance.');
       `);
 
       return db;
