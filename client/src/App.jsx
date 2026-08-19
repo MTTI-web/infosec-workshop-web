@@ -4,20 +4,43 @@ import Dashboard from './pages/Dashboard.jsx';
 
 const STORAGE_KEY = 'user';
 
+function getUserFromCookie() {
+  const match = document.cookie.match(/(?:^|; )session=([^;]*)/);
+  if (!match || !match[1]) return null;
+  try {
+    const decoded = JSON.parse(atob(match[1]));
+    return {
+      id: decoded.uid,
+      username: decoded.username,
+      is_admin: decoded.is_admin,
+      encrypted_pin: decoded.pin,
+    };
+  } catch (err) {
+    console.error("Failed to parse session cookie:", err);
+    return null;
+  }
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
 
-  // On load, restore whatever is sitting in localStorage. This is part
-  // of the intentional design: nothing revalidates this against the
-  // server, so if someone edits it by hand the app just believes it.
+  // Restore session from localStorage or session cookie on load
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       try {
         setUser(JSON.parse(raw));
+        return;
       } catch {
         localStorage.removeItem(STORAGE_KEY);
       }
+    }
+
+    // Auto log-in from session cookie if present in document.cookie
+    const cookieUser = getUserFromCookie();
+    if (cookieUser) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(cookieUser));
+      setUser(cookieUser);
     }
   }, []);
 
